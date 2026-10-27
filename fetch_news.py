@@ -59,13 +59,21 @@ def real_url(link):
 
 def summarize(e):
     try:
-        raw = urllib.request.urlopen(urllib.request.Request(real_url(e["link"]), headers={"User-Agent": "Mozilla/5.0"}), timeout=15).read(300000)
-        page = raw.decode("utf-8", "replace")
+        resp = urllib.request.urlopen(urllib.request.Request(real_url(e["link"]), headers={"User-Agent": "Mozilla/5.0"}), timeout=15)
+        raw = resp.read(300000)
+        cs = resp.headers.get_content_charset()
+        if not cs:
+            m = re.search(rb'charset=["\x27]?([\w-]+)', raw[:4000], re.I)
+            cs = m.group(1).decode() if m else "utf-8"
+        try:
+            page = raw.decode(cs, "replace")
+        except LookupError:
+            page = raw.decode("utf-8", "replace")
         for pat in (r'<meta[^>]+(?:property|name)=["\x27]og:description["\x27][^>]+content=["\x27]([^"\x27]*)',
                     r'<meta[^>]+content=["\x27]([^"\x27]*)["\x27][^>]+(?:property|name)=["\x27]og:description',
                     r'<meta[^>]+name=["\x27]description["\x27][^>]+content=["\x27]([^"\x27]*)'):
             m = re.search(pat, page, re.I)
-            if m and len(m.group(1)) > 20:
+            if m and len(m.group(1)) > 20 and "�" not in m.group(1):
                 return html.unescape(m.group(1)).strip()[:160]
     except Exception as ex:
         print("summary fail", e["title"][:30], ex)
@@ -111,7 +119,7 @@ if __name__ == "__main__":
         items = items[:1000]
         prev = {key(e): e for e in old}
         for e in items:
-            if key(e) in prev and "summary" in prev[key(e)]:
+            if key(e) in prev and "summary" in prev[key(e)] and "�" not in prev[key(e)]["summary"]:
                 e["summary"] = prev[key(e)]["summary"]
         todo = [e for e in items if "summary" not in e][:80]
         with concurrent.futures.ThreadPoolExecutor(8) as ex:

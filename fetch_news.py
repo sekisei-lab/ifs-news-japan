@@ -8,7 +8,7 @@ TOPICS = {
     "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用', 'IFS JAL', 'IFS 日本航空', 'IFS 航空 導入'],
     "提携・パートナー": ['IFS パートナー 提携', 'IFS Cloud 協業'],
     "製品・AI": ['IFS Cloud AI', 'IFS Industrial AI', 'IFS Nexus Black'],
-    "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan', 'IFS Cloud セミナー 開催', 'IFS Cloud ウェビナー 共催', 'IFS NEC セミナー', 'IFS 電通総研 セミナー', 'IFS ベイカレント セミナー', 'IFS Cloud FSM セミナー', 'IFS Cloud イベント 申込'],
+    "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan', 'IFS Cloud セミナー 開催', 'IFS Cloud ウェビナー 共催', 'IFS NEC セミナー', 'IFS エクシオ セミナー', 'IFS アルファスト セミナー', 'IFS 日本IBM セミナー', 'IFS 電通総研 セミナー', 'IFS ベイカレント セミナー', 'IFS Cloud FSM セミナー', 'IFS Cloud イベント 申込'],
 }
 EVENT_RE = re.compile(r"セミナー|ウェビナー|ウェビナ|フォーラム|カンファレンス|イベント|Unleashed|IFS Connect|開催|共催|申込|アーカイブ配信")
 

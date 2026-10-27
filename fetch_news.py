@@ -8,8 +8,11 @@ TOPICS = {
     "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用', 'IFS JAL', 'IFS 日本航空', 'IFS 航空 導入'],
     "提携・パートナー": ['IFS パートナー 提携', 'IFS Cloud 協業'],
     "製品・AI": ['IFS Cloud AI', 'IFS Industrial AI', 'IFS Nexus Black'],
-    "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan'],
+    "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan', 'IFS Cloud セミナー 開催', 'IFS Cloud ウェビナー 共催', 'IFS NEC セミナー', 'IFS 電通総研 セミナー', 'IFS ベイカレント セミナー', 'IFS Cloud FSM セミナー', 'IFS Cloud イベント 申込'],
 }
+EVENT_RE = re.compile(r"セミナー|ウェビナー|ウェビナ|フォーラム|カンファレンス|イベント|Unleashed|IFS Connect|開催|共催|申込|アーカイブ配信")
+
+
 def fetch(url):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=15) as r:
@@ -99,7 +102,7 @@ def collect():
                         if "ifs" not in t and "ｉｆｓ" not in t:
                             continue
                         seen.add(key)
-                        e["topic"] = topic
+                        e["topic"] = "イベント・セミナー" if EVENT_RE.search(e["title"]) else topic
                         items.append(e)
                 except Exception as ex:
                     print("fetch fail", q, hint, ex)
@@ -125,6 +128,11 @@ if __name__ == "__main__":
         with concurrent.futures.ThreadPoolExecutor(8) as ex:
             for e, sm in zip(todo, ex.map(summarize, todo)):
                 e["summary"] = sm
+        for e in items:
+            if EVENT_RE.search(e["title"] + e.get("summary", "")):
+                e["topic"] = "イベント・セミナー"
+            elif e["topic"] == "イベント・セミナー":
+                e["topic"] = "IFS 全般"
         Path(__file__).parent.joinpath("news.json").write_text(
             json.dumps({"updated": time.time(), "items": items}, ensure_ascii=False), encoding="utf-8")
     print(len(items), "items")

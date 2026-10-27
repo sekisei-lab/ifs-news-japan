@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IFS Japan ニュースモニター</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1c2330;--mut:#6b7585;--acc:#5b2d90;--new:#e8590c;--bd:#e2e5ea}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1d222a;--fg:#e6e9ee;--mut:#8b95a5;--acc:#b794f4;--bd:#2c333d}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Yu Gothic UI",Meiryo,sans-serif}
+header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--bd);padding:12px 16px;z-index:2}
+h1{font-size:18px;margin:0 0 8px;color:var(--acc)}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+button,input{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:16px;padding:3px 12px;cursor:pointer}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+input{cursor:text;min-width:140px}
+#st{color:var(--mut);font-size:13px;margin-left:auto}
+main{max-width:860px;margin:0 auto;padding:12px 16px}
+.it{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:8px}
+.it a{color:var(--fg);text-decoration:none;font-weight:600}.it a:hover{color:var(--acc);text-decoration:underline}
+.meta{color:var(--mut);font-size:12.5px;margin-top:2px}
+.tag{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:0 8px;margin-right:6px}
+.new{background:var(--new);color:#fff;border-radius:4px;padding:0 6px;font-size:11px;margin-right:6px}
+</style></head><body>
+<header><h1>IFS Japan マーケティング ニュースモニター</h1>
+<div class="bar" id="tabs"></div>
+<div class="bar" style="margin-top:6px"><input id="q" placeholder="キーワード絞り込み"><button id="rf">再読み込み</button><button id="nt">通知 OFF</button><span id="st"></span></div></header>
+<main id="list"></main>
+<script>
+const $=s=>document.querySelector(s);let items=[],topic="すべて",known=new Set(JSON.parse(localStorage.ifsKnown||"[]")),first=true,notify=false,upd=0;
+function ago(ts){const m=(Date.now()/1000-ts)/60;if(!ts)return"";if(m<60)return Math.max(1,m|0)+"分前";if(m<1440)return(m/60|0)+"時間前";return new Date(ts*1000).toLocaleDateString("ja-JP")}
+function render(){const topics=["すべて",...new Set(items.map(i=>i.topic))];
+$("#tabs").innerHTML=topics.map(t=>`<button class="${t==topic?"on":""}" data-t="${t}">${t}</button>`).join("");
+$("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{topic=b.dataset.t;render()});
+const q=$("#q").value.toLowerCase();
+$("#list").innerHTML=items.filter(i=>(topic=="すべて"||i.topic==topic)&&(!q||(i.title+i.source).toLowerCase().includes(q))).map(i=>{
+const e=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+return`<div class="it"><a href="${e(i.link)}" target="_blank" rel="noopener">${i.isNew?'<span class="new">NEW</span>':""}${e(i.title)}</a><div class="meta"><span class="tag">${e(i.topic)}</span>${e(i.source)} ・ ${ago(i.ts)}</div></div>`}).join("")||"<p>該当なし</p>"}
+async function load(force){try{const r=await(await fetch("news.json?t="+Date.now())).json();upd=r.updated;
+const fresh=[];r.items.forEach(i=>{i.isNew=!first&&!known.has(i.link);if(i.isNew)fresh.push(i);known.add(i.link)});
+items=r.items.map(i=>({...i,isNew:i.isNew||(items.find(o=>o.link==i.link)||{}).isNew}));
+localStorage.ifsKnown=JSON.stringify([...known].slice(-500));
+if(notify&&fresh.length)new Notification("IFS 新着 "+fresh.length+"件",{body:fresh[0].title});
+first=false;render()}catch(e){$("#st").textContent="取得エラー"}}
+function tick(){if(upd)$("#st").textContent="最終取得 "+new Date(upd*1000).toLocaleTimeString("ja-JP")+"（約30分毎に自動更新）"}
+$("#q").oninput=render;$("#rf").onclick=()=>load(true);
+$("#nt").onclick=async()=>{if(!notify&&await Notification.requestPermission()=="granted"){notify=true}else notify=false;$("#nt").textContent="通知 "+(notify?"ON":"OFF")};
+load();setInterval(load,300000);setInterval(tick,5000);
+</script></body></html>

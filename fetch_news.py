@@ -5,7 +5,7 @@ from pathlib import Path
 
 TOPICS = {
     "IFS 全般": ['"IFS Cloud"', '"IFSジャパン"', '"IFS Japan"'],
-    "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用'],
+    "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用', 'IFS JAL', 'IFS 日本航空', 'IFS 航空 導入'],
     "提携・パートナー": ['IFS パートナー 提携', 'IFS Cloud 協業'],
     "製品・AI": ['IFS Cloud AI', 'IFS Industrial AI', 'IFS Nexus Black'],
     "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan'],
@@ -41,7 +41,7 @@ def collect():
         for q in queries:
             enc = urllib.parse.quote(q)
             urls = [
-                (f"https://news.google.com/rss/search?q={enc}+when:30d&hl=ja&gl=JP&ceid=JP:ja", "Google News"),
+                (f"https://news.google.com/rss/search?q={enc}+when:1y&hl=ja&gl=JP&ceid=JP:ja", "Google News"),
                 (f"https://www.bing.com/news/search?q={enc}&format=rss&mkt=ja-JP", "Bing News"),
             ]
             for url, hint in urls:
@@ -59,13 +59,19 @@ def collect():
                 except Exception as ex:
                     print("fetch fail", q, hint, ex)
     items.sort(key=lambda x: x["ts"], reverse=True)
-    return items[:200]
+    return items
 
 
 
 if __name__ == "__main__":
+    path = Path(__file__).parent / "news.json"
     items = collect()
     if items:
+        old = json.loads(path.read_text(encoding="utf-8"))["items"] if path.exists() else []
+        have = {re.sub(r"\W", "", e["title"])[:40] for e in items}
+        items += [e for e in old if re.sub(r"\W", "", e["title"])[:40] not in have]
+        items.sort(key=lambda x: x["ts"], reverse=True)
+        items = items[:1000]
         Path(__file__).parent.joinpath("news.json").write_text(
             json.dumps({"updated": time.time(), "items": items}, ensure_ascii=False), encoding="utf-8")
     print(len(items), "items")

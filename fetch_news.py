@@ -3,13 +3,18 @@ import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
+BPM_TOPIC = "iGrafx・BPM"
 TOPICS = {
     "IFS 全般": ['"IFS Cloud"', '"IFSジャパン"', '"IFS Japan"'],
     "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用', 'IFS JAL', 'IFS 日本航空', 'IFS 航空 導入'],
     "提携・パートナー": ['IFS パートナー 提携', 'IFS Cloud 協業'],
     "製品・AI": ['IFS Cloud AI', 'IFS Industrial AI', 'IFS Nexus Black'],
     "イベント・セミナー": ['IFS セミナー ウェビナー', 'IFS Connect Japan', 'IFS Cloud セミナー 開催', 'IFS Cloud ウェビナー 共催', 'IFS NEC セミナー', 'IFS エクシオ セミナー', 'IFS アルファスト セミナー', 'IFS 日本IBM セミナー', 'IFS 電通総研 セミナー', 'IFS ベイカレント セミナー', 'IFS Cloud FSM セミナー', 'IFS Cloud イベント 申込'],
+    BPM_TOPIC: ['iGrafx', 'iGrafx 日本', 'サン・プラニング・システムズ', 'サン・プラニング・システムズ iGrafx', 'BPMフォーラム',
+                'BPM 業務プロセス セミナー', 'ビジネスプロセス管理 BPM', 'プロセスマイニング', 'プロセスマイニング 事例', 'BPM イベント 開催'],
 }
+BPM_RE = re.compile(r"iGrafx|ｉＧｒａｆｘ|サン[・･]?プラ[ニン]ング|プロセスマイニング|業務プロセス|ビジネスプロセス|BPMフォーラム|業務改革|BPMS|BPM(?=.{0,12}(基盤|システム|Suite|クラウド|導入|市場|管理))", re.I)
+NOISE_RE = re.compile(r"新曲|MV|ショートフィルム|不倫|ライブ|アーティスト|presents|EXHIBITION|市場規模|市場調査|レポートを発表|\d{4}年から\d{4}年|\d{4}-\d{4}")
 EVENT_RE = re.compile(r"セミナー|ウェビナー|ウェビナ|フォーラム|カンファレンス|イベント|Unleashed|IFS Connect|開催|共催|申込|アーカイブ配信")
 
 
@@ -99,10 +104,13 @@ def collect():
                         if key in seen:
                             continue
                         t = e["title"].lower()
-                        if "ifs" not in t and "ｉｆｓ" not in t:
+                        if topic == BPM_TOPIC:
+                            if not BPM_RE.search(e["title"]) or NOISE_RE.search(e["title"]):
+                                continue
+                        elif "ifs" not in t and "ｉｆｓ" not in t:
                             continue
                         seen.add(key)
-                        e["topic"] = "イベント・セミナー" if EVENT_RE.search(e["title"]) else topic
+                        e["topic"] = topic if topic == BPM_TOPIC else ("イベント・セミナー" if EVENT_RE.search(e["title"]) else topic)
                         items.append(e)
                 except Exception as ex:
                     print("fetch fail", q, hint, ex)
@@ -117,6 +125,7 @@ if __name__ == "__main__":
     if items:
         old = json.loads(path.read_text(encoding="utf-8"))["items"] if path.exists() else []
         have = {re.sub(r"\W", "", e["title"])[:40] for e in items}
+        old = [e for e in old if e["topic"] != BPM_TOPIC or (BPM_RE.search(e["title"]) and not NOISE_RE.search(e["title"]))]
         items += [e for e in old if re.sub(r"\W", "", e["title"])[:40] not in have]
         items.sort(key=lambda x: x["ts"], reverse=True)
         items = items[:1000]
@@ -129,6 +138,8 @@ if __name__ == "__main__":
             for e, sm in zip(todo, ex.map(summarize, todo)):
                 e["summary"] = sm
         for e in items:
+            if e["topic"] == BPM_TOPIC:
+                continue
             if EVENT_RE.search(e["title"] + e.get("summary", "")):
                 e["topic"] = "イベント・セミナー"
             elif e["topic"] == "イベント・セミナー":

@@ -24,16 +24,28 @@ main{max-width:860px;margin:0 auto;padding:12px 16px}
 <header><h1>IFS / iGrafx・BPM マーケティング ニュースモニター</h1>
 <div class="bar" id="tabs"></div>
 <div class="bar" id="tabs2" style="margin-top:6px"></div>
+<div class="bar" id="tabs3" style="margin-top:6px"></div>
 <div class="bar" style="margin-top:6px"><input id="q" placeholder="キーワード絞り込み"><button id="rf">再読み込み</button><button id="nt">通知 OFF</button><span id="st"></span></div></header>
 <main id="list"></main>
+<main id="fin" style="display:none"></main>
 <script>
 const $=s=>document.querySelector(s);let items=[],topic="IFS 全般",known=new Set(JSON.parse(localStorage.ifsKnown||"[]")),first=true,notify=false,upd=0;
 function ago(ts){const m=(Date.now()/1000-ts)/60;if(!ts)return"";if(m<60)return Math.max(1,m|0)+"分前";if(m<1440)return(m/60|0)+"時間前";return new Date(ts*1000).toLocaleDateString("ja-JP")}
 const IFS_T=["IFS 全般","導入・事例","提携・パートナー","製品・AI","イベント・セミナー"],IGX_T=["iGrafx・SPS","BPMイベント","BPM・プロセスマイニング"];
+const FIN_T=["金融動向"];
+const GROUPS=[{n:"日経・日本株",s:[["INDEX:NKY","日経平均"],["OANDA:JP225USD","日経225先物(CFD)"],["OSE:NK2251!","日経225先物(大阪)"]]},{n:"米株・米株先物",s:[["FOREXCOM:SPXUSD","S&P500"],["FOREXCOM:NSXUSD","ナスダック100"],["FOREXCOM:DJI","NYダウ"],["OANDA:SPX500USD","S&P500先物(CFD)"],["OANDA:NAS100USD","ナスダック先物(CFD)"],["OANDA:US30USD","ダウ先物(CFD)"]]},{n:"主要為替",s:[["FX:USDJPY","ドル/円"],["FX:EURJPY","ユーロ/円"],["FX:GBPJPY","ポンド/円"],["FX:AUDJPY","豪ドル/円"],["FX:EURUSD","ユーロ/ドル"]]},{n:"原油価格・先物",s:[["TVC:USOIL","WTI原油"],["TVC:UKOIL","ブレント原油"],["OANDA:WTICOUSD","WTI先物(CFD)"],["OANDA:BCOUSD","ブレント先物(CFD)"]]}];
+let finDone=false;
+function widget(el,name,cfg){const c=document.createElement("div");c.className="tradingview-widget-container";const w=document.createElement("div");w.className="tradingview-widget-container__widget";c.appendChild(w);const s=document.createElement("script");s.src="https://s3.tradingview.com/external-embedding/embed-widget-"+name+".js";s.async=true;s.text=JSON.stringify(cfg);c.appendChild(s);el.appendChild(c)}
+function buildFin(){if(finDone)return;finDone=true;const dark=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";const f=$("#fin");
+f.innerHTML="<h2 style=\"font-size:15px;margin:4px 0\">日経225・CME先物 リアルタイム（<a href=\"https://nikkei225jp.com/cme/\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--acc)\">nikkei225jp.com</a> 提供・新しいタブで開く）</h2><iframe src=\"https://nikkei225jp.com/cme/\" style=\"width:100%;height:900px;border:1px solid var(--bd);border-radius:8px;background:#fff\" loading=\"lazy\"></iframe><h2 style=\"font-size:15px;margin:16px 0 4px\">相場一覧（遅延表示の場合あり）</h2><div id=\"fq\" style=\"height:640px\"></div><h2 style=\"font-size:15px;margin:16px 0 4px\">日米 主要経済指標カレンダー</h2><div id=\"fe\" style=\"height:640px\"></div>";
+widget($("#fq"),"market-quotes",{width:"100%",height:640,symbolsGroups:GROUPS.map(g=>({name:g.n,symbols:g.s.map(x=>({name:x[0],displayName:x[1]}))})),showSymbolLogo:false,colorTheme:dark,isTransparent:true,locale:"ja"});
+widget($("#fe"),"events",{width:"100%",height:640,colorTheme:dark,isTransparent:true,locale:"ja",importanceFilter:"0,1",countryFilter:"jp,us"})}
 function tabs(el,list){const n=t=>items.filter(i=>i.topic==t).length;
-el.innerHTML=list.map(t=>`<button class="${t==topic?"on":""}" data-t="${t}">${t} <small>${n(t)}</small></button>`).join("");
+el.innerHTML=list.map(t=>`<button class="${t==topic?"on":""}" data-t="${t}">${t}${list==FIN_T?"":` <small>${n(t)}</small>`}</button>`).join("");
 el.querySelectorAll("button").forEach(b=>b.onclick=()=>{topic=b.dataset.t;render()})}
-function render(){tabs($("#tabs"),IFS_T);tabs($("#tabs2"),IGX_T);
+function render(){tabs($("#tabs"),IFS_T);tabs($("#tabs2"),IGX_T);tabs($("#tabs3"),FIN_T);
+const fin=topic=="金融動向";$("#fin").style.display=fin?"":"none";$("#list").style.display=fin?"none":"";$("#q").style.display=fin?"none":"";if(fin){buildFin();return}
+
 const q=$("#q").value.toLowerCase();
 $("#list").innerHTML=items.filter(i=>i.topic==topic&&(!q||(i.title+i.source).toLowerCase().includes(q))).map(i=>{
 const e=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

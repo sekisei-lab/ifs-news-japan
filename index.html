@@ -9,6 +9,7 @@ header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(
 h1{font-size:18px;margin:0 0 8px;color:var(--acc)}
 .bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 button,input{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:16px;padding:3px 12px;cursor:pointer}
+small{opacity:.7;margin-left:2px}
 button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 input{cursor:text;min-width:140px}
 #st{color:var(--mut);font-size:13px;margin-left:auto}
@@ -22,16 +23,19 @@ main{max-width:860px;margin:0 auto;padding:12px 16px}
 </style></head><body>
 <header><h1>IFS / iGrafx・BPM マーケティング ニュースモニター</h1>
 <div class="bar" id="tabs"></div>
+<div class="bar" id="tabs2" style="margin-top:6px"></div>
 <div class="bar" style="margin-top:6px"><input id="q" placeholder="キーワード絞り込み"><button id="rf">再読み込み</button><button id="nt">通知 OFF</button><span id="st"></span></div></header>
 <main id="list"></main>
 <script>
-const $=s=>document.querySelector(s);let items=[],topic="すべて",known=new Set(JSON.parse(localStorage.ifsKnown||"[]")),first=true,notify=false,upd=0;
+const $=s=>document.querySelector(s);let items=[],topic="IFS 全般",known=new Set(JSON.parse(localStorage.ifsKnown||"[]")),first=true,notify=false,upd=0;
 function ago(ts){const m=(Date.now()/1000-ts)/60;if(!ts)return"";if(m<60)return Math.max(1,m|0)+"分前";if(m<1440)return(m/60|0)+"時間前";return new Date(ts*1000).toLocaleDateString("ja-JP")}
-function render(){const topics=["すべて",...new Set(items.map(i=>i.topic))];
-$("#tabs").innerHTML=topics.map(t=>`<button class="${t==topic?"on":""}" data-t="${t}">${t}</button>`).join("");
-$("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{topic=b.dataset.t;render()});
+const IFS_T=["IFS 全般","導入・事例","提携・パートナー","製品・AI","イベント・セミナー"],IGX_T=["iGrafx・SPS","BPMイベント","BPM・プロセスマイニング"];
+function tabs(el,list){const n=t=>items.filter(i=>i.topic==t).length;
+el.innerHTML=list.map(t=>`<button class="${t==topic?"on":""}" data-t="${t}">${t} <small>${n(t)}</small></button>`).join("");
+el.querySelectorAll("button").forEach(b=>b.onclick=()=>{topic=b.dataset.t;render()})}
+function render(){tabs($("#tabs"),IFS_T);tabs($("#tabs2"),IGX_T);
 const q=$("#q").value.toLowerCase();
-$("#list").innerHTML=items.filter(i=>(topic=="すべて"||i.topic==topic)&&(!q||(i.title+i.source).toLowerCase().includes(q))).map(i=>{
+$("#list").innerHTML=items.filter(i=>i.topic==topic&&(!q||(i.title+i.source).toLowerCase().includes(q))).map(i=>{
 const e=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 return`<div class="it"><a href="${e(i.link)}" target="_blank" rel="noopener">${i.isNew?'<span class="new">NEW</span>':""}${e(i.title)}</a>${i.summary?`<div class="sm">${e(i.summary)}</div>`:""}<div class="meta"><span class="tag">${e(i.topic)}</span>${e(i.source)} ・ ${ago(i.ts)}</div></div>`}).join("")||"<p>該当なし</p>"}
 async function load(force){try{const r=await(await fetch("news.json?t="+Date.now())).json();upd=r.updated;

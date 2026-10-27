@@ -4,6 +4,17 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 BPM_TOPIC = "iGrafx・BPM"
+IGX_TOPICS = {BPM_TOPIC, "iGrafx・SPS", "BPMイベント", "BPM・プロセスマイニング"}
+IGX_RE = re.compile(r"iGrafx|ｉＧｒａｆｘ|サン[・･]?プラ[ニン]ング", re.I)
+BPM_EVENT_RE = re.compile(r"フォーラム|セミナー|ウェビナー|カンファレンス|イベント|開催|登壇|Connect|オンライン配信|アーカイブ")
+
+
+def igx_topic(e):
+    if IGX_RE.search(e["title"]):
+        return "iGrafx・SPS"
+    if BPM_EVENT_RE.search(e["title"]):
+        return "BPMイベント"
+    return "BPM・プロセスマイニング"
 TOPICS = {
     "IFS 全般": ['"IFS Cloud"', '"IFSジャパン"', '"IFS Japan"'],
     "導入・事例": ['IFS Cloud 導入', 'IFS Cloud 導入事例', 'IFS ERP 採用', 'IFS JAL', 'IFS 日本航空', 'IFS 航空 導入'],
@@ -125,7 +136,7 @@ if __name__ == "__main__":
     if items:
         old = json.loads(path.read_text(encoding="utf-8"))["items"] if path.exists() else []
         have = {re.sub(r"\W", "", e["title"])[:40] for e in items}
-        old = [e for e in old if e["topic"] != BPM_TOPIC or (BPM_RE.search(e["title"]) and not NOISE_RE.search(e["title"]))]
+        old = [e for e in old if e["topic"] not in IGX_TOPICS or (BPM_RE.search(e["title"]) and not NOISE_RE.search(e["title"]))]
         items += [e for e in old if re.sub(r"\W", "", e["title"])[:40] not in have]
         items.sort(key=lambda x: x["ts"], reverse=True)
         items = items[:1000]
@@ -138,7 +149,8 @@ if __name__ == "__main__":
             for e, sm in zip(todo, ex.map(summarize, todo)):
                 e["summary"] = sm
         for e in items:
-            if e["topic"] == BPM_TOPIC:
+            if e["topic"] in IGX_TOPICS:
+                e["topic"] = igx_topic(e)
                 continue
             if EVENT_RE.search(e["title"] + e.get("summary", "")):
                 e["topic"] = "イベント・セミナー"
